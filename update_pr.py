@@ -51,14 +51,26 @@ def call_openai(prompt):
         return "Failed to generate suggestions due to an error. Please try again."
 
 
-def post_comments_to_pull_request(pull_request, suggestions):
+def post_comments_to_pull_request(pull_request, comments):
     import re
 
+    # Regular expression to find suggestion blocks within the comments
+    suggestion_pattern = re.compile(
+        r"Line: (\d+)\n"
+        r"Type: (.+)\n"
+        r"Explanation: (.+)\n"
+        r"Code Suggestions: (.+?)(?=\n\n|\Z)", re.DOTALL
+    )
+
+    # Find all suggestions within the comments
+    suggestions = suggestion_pattern.findall(comments)
+    print(f"Suggestions found: {suggestions}")  # Debug print
+
     for suggestion in suggestions:
-        line, change_type, explanation, code_suggestions, path = suggestion
         try:
-            # The position needs to be determined; for simplification, we use the line directly here
-            position = int(line)  # This needs careful handling and adjustment as per actual diff positioning
+            line, change_type, explanation, code_suggestions = suggestion
+            path = 'determined/path/here'  # Assuming you determine or extract path somehow
+            position = int(line)  # Simplification for example purposes
             pull_request.create_review_comment(
                 body=f"Type: {change_type}\nExplanation: {explanation}\nCode Suggestions: {code_suggestions}",
                 commit_id=pull_request.head.sha,
@@ -66,7 +78,8 @@ def post_comments_to_pull_request(pull_request, suggestions):
                 position=position
             )
         except Exception as e:
-            print(f"Failed to post inline comment at line {line} in {path}: {e}")
+            print(f"Failed to post inline comment: {e}")
+
 
 
 
