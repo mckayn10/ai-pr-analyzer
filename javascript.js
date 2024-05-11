@@ -110,3 +110,5 @@ function updateCartDisplay(cart) {
 }
 
 function thisDoesNothing() {}
+
+function thisDoesNothing() {}
