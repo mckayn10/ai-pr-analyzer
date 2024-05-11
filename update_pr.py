@@ -23,8 +23,8 @@ def format_data_for_openai(diffs):
         "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
         "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
         "The format for each suggestion should be as follows:\n"
-        "File Path: [file path]\n"
-        "Line: [beginning line number]\n"
+        "File Path: [file path. Put this everytime even if it is the same file path as the previous suggestion.]\n"
+        "Line: [beginning line number where the code is in the file, not in the diff]\n"
         "Type: [type of change]\n"
         "Explanation: [brief explanation]\n"
         "Code Suggestions: [code snippets to replace the existing code for this specific suggestion]\n\n"
@@ -52,15 +52,20 @@ def call_openai(prompt):
         return "Failed to generate suggestions due to an error. Please try again."
 
 
-def post_comments_to_pull_request(pull_request, comments):
-    # Check if the comments contain more than just whitespace
-    if comments.strip():
-        # Attempt to post a single, consolidated comment to the pull request
+def post_comments_to_pull_request(pull_request, comments, file_path):
+    if comments.strip():  # Check if the comments contain more than just whitespace
         try:
-            # Assuming you're posting a general PR comment, not an in-line comment
-            pull_request.create_issue_comment(comments)
+            # Post an inline comment at line 1 of the specified file in the pull request review
+            # Note: 'position' needs careful handling if line 1 does not correspond to a change in the PR diff
+            pull_request.create_review_comment(
+                body=comments,  # Text of the comment
+                commit_id=pull_request.head.sha,  # ID of the last commit in the PR
+                path=file_path,  # Path to the file where the comment will be posted
+                position=60  # Position in the diff (assuming line 1 has a diff, otherwise this won't work)
+            )
         except Exception as e:
-            print(f"Failed to post comment: {e}")
+            print(f"Failed to post inline comment: {e}")
+
 
 
 
@@ -79,7 +84,7 @@ def main():
         suggestions = call_openai(prompt)  # Call OpenAI to get suggestions for code improvement
         print(f"Suggestions: {suggestions}")
 
-        post_comments_to_pull_request(pull_request, suggestions)  # Post suggestions as comments on the PR
+        post_comments_to_pull_request(pull_request, suggestions, 'javascript.js')  # Post suggestions as comments on the PR
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         sys.exit(1)
