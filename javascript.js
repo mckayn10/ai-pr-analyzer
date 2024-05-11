@@ -112,10 +112,3 @@ function updateCartDisplay(cart) {
 function thisDoesNothing() {}
 
 function thisDoesNothing() {}
-
-function thisDoesNothing() {}
-
-function thisDoesNothing() {}
-
-function thisDoesNothing() {}
-function thisDoesNothing() {}
