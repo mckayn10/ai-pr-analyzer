@@ -49,3 +49,46 @@ function processTransaction(amount, account) {
 
 	return true;
 }
+
+function manageCart(action, product, quantity) {
+	let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+	if (action === 'add') {
+		const productIndex = cart.findIndex((item) => item.id === product.id);
+		if (productIndex > -1) {
+			cart[productIndex].quantity += quantity;
+			console.log(`Added ${quantity} of ${product.name} to cart.`);
+		} else {
+			cart.push({ ...product, quantity });
+			console.log(
+				`New product ${product.name} added to cart with quantity ${quantity}.`
+			);
+		}
+	} else if (action === 'remove') {
+		cart = cart.filter((item) => item.id !== product.id);
+		console.log(`Product ${product.name} removed from cart.`);
+	} else if (action === 'update') {
+		const productIndex = cart.findIndex((item) => item.id === product.id);
+		if (productIndex > -1) {
+			cart[productIndex].quantity = quantity;
+			console.log(
+				`Product ${product.name} quantity updated to ${quantity}.`
+			);
+		}
+	}
+
+	localStorage.setItem('cart', JSON.stringify(cart));
+	updateCartDisplay(cart);
+	return cart;
+}
+
+function updateCartDisplay(cart) {
+	const cartDisplay = document.getElementById('cart');
+	cartDisplay.innerHTML = ''; // Clear current display
+	cart.forEach((item) => {
+		const productElement = document.createElement('div');
+		productElement.textContent = `${item.name}: ${item.quantity}`;
+		cartDisplay.appendChild(productElement);
+	});
+	console.log('Cart display updated.');
+}
