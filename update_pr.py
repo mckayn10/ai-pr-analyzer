@@ -37,16 +37,15 @@ def call_openai(prompt):
 
 
 def post_comments_to_pull_request(pull_request, comments):
-    for comment in comments.split("\n"):
-        print(f"Posting comment: {comment}")
-        if comment.strip():
-            # Example: Post comments at the first line of the changed file for simplicity
-            files = pull_request.get_files()
-            for file in files:
-                try:
-                    pull_request.create_review_comment(body=comment, commit_id=pull_request.head.sha, path=file.filename, position=1)
-                except Exception as e:
-                    print(f"Failed to post comment: {e}")
+    # Check if the comments contain more than just whitespace
+    if comments.strip():
+        # Attempt to post a single, consolidated comment to the pull request
+        try:
+            # Assuming you're posting a general PR comment, not an in-line comment
+            pull_request.create_issue_comment(comments)
+        except Exception as e:
+            print(f"Failed to post comment: {e}")
+
 
 
 def main():
