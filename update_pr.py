@@ -23,6 +23,7 @@ def format_data_for_openai(diffs):
         "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
         "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
         "The format for each suggestion should be as follows:\n"
+        "File Path: [file path]\n"
         "Line: [beginning line number]\n"
         "Type: [type of change]\n"
         "Explanation: [brief explanation]\n"
@@ -52,42 +53,14 @@ def call_openai(prompt):
 
 
 def post_comments_to_pull_request(pull_request, comments):
-    import re
-
-    # This regular expression matches the format of each suggestion block
-    suggestion_pattern = re.compile(
-        r"Line: (\d+).*?Type: (.*?)\nExplanation: (.*?)\nCode Suggestions:\n```(.*?)```",
-        re.DOTALL
-    )
-
-    print(f"suggestion_pattern: {suggestion_pattern}")
-    # Find all matches in the comments string
-    suggestions = suggestion_pattern.findall(comments)
-    print(f"suggestions: {suggestions}")
-
-    for suggestion in suggestions:
-        line, suggestion_type, explanation, code_suggestions = suggestion
-        comment_body = (
-            f"**Type:** {suggestion_type}\n"
-            f"**Explanation:** {explanation}\n"
-            f"**Code Suggestions:**\n```javascript\n{code_suggestions}\n```"
-        )
-        print(f"Posting comment at line {line}: {comment_body}")
-
-        # Post the first line number mentioned
+    # Check if the comments contain more than just whitespace
+    if comments.strip():
+        # Attempt to post a single, consolidated comment to the pull request
         try:
-            first_line = int(line.split(',')[0])  # Handling multiple lines, taking the first
-            print(f"Posting comment at first line {first_line}: {comment_body}")
-            pull_request.create_review_comment(
-                body=comment_body,
-                commit_id=pull_request.head.sha,
-                path='javascript.js',  # Ensure this is the correct path
-                position=first_line  # This needs to be adjusted if position calculation is required
-            )
+            # Assuming you're posting a general PR comment, not an in-line comment
+            pull_request.create_issue_comment(comments)
         except Exception as e:
-            print(f"Failed to post comment at line {line}: {e}")
-
-
+            print(f"Failed to post comment: {e}")
 
 
 
