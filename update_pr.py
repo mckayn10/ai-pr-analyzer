@@ -7,9 +7,10 @@ from langchain_core.output_parsers.string import StrOutputParser
 
 def get_pull_request_diffs(pull_request):
     return [
-        {"filename": file.filename, "patch": file.patch}
+        {"filename": file.filename, "patch": file.patch, "path": file.filename}
         for file in pull_request.get_files()
     ]
+
 
 def format_data_for_openai(diffs):
     changes = "\n".join([
@@ -21,6 +22,12 @@ def format_data_for_openai(diffs):
         "Make a special focus on components and functions that are too big, overly complicated, and can have parts extracted to become more reusable.\n\n"
         "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
         "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
+        "The format for each suggestion should be as follows:\n"
+        "Line: [beginning line number]\n"
+        "Type: [type of change]\n"
+        "Explanation: [brief explanation]\n"
+        "Code Suggestions: [code snippets to replace the existing code for this specific suggestion]\n\n"
+        "If there are multiple suggestions for the same line, separate them with a comma.\n\n"
         "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
         f"{changes}"
     )
@@ -44,15 +51,23 @@ def call_openai(prompt):
         return "Failed to generate suggestions due to an error. Please try again."
 
 
-def post_comments_to_pull_request(pull_request, comments):
-    # Check if the comments contain more than just whitespace
-    if comments.strip():
-        # Attempt to post a single, consolidated comment to the pull request
+def post_comments_to_pull_request(pull_request, suggestions):
+    import re
+
+    for suggestion in suggestions:
+        line, change_type, explanation, code_suggestions, path = suggestion
         try:
-            # Assuming you're posting a general PR comment, not an in-line comment
-            pull_request.create_issue_comment(comments)
+            # The position needs to be determined; for simplification, we use the line directly here
+            position = int(line)  # This needs careful handling and adjustment as per actual diff positioning
+            pull_request.create_review_comment(
+                body=f"Type: {change_type}\nExplanation: {explanation}\nCode Suggestions: {code_suggestions}",
+                commit_id=pull_request.head.sha,
+                path=path,
+                position=position
+            )
         except Exception as e:
-            print(f"Failed to post comment: {e}")
+            print(f"Failed to post inline comment at line {line} in {path}: {e}")
+
 
 
 
