@@ -108,3 +108,5 @@ function updateCartDisplay(cart) {
 	});
 	console.log('Cart display updated.');
 }
+
+function thisDoesNothing() {}
