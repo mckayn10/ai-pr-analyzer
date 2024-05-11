@@ -21,7 +21,7 @@ def format_data_for_openai(diffs):
     "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
     "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
     "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
-    "{changes}"
+    {changes}
 
             
     return prompt
