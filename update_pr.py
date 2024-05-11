@@ -4,33 +4,6 @@ from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers.string import StrOutputParser
 
-def main():
-    # Initialize GitHub API with token
-    g = Github(os.getenv('MY_GITHUB_TOKEN'))
-
-    # Get the repo path and PR number from the environment variables
-    repo_path = os.getenv('REPO_PATH')
-    pr_number = int(os.getenv('PR_NUMBER'))
-    
-    # Get the repo object and pull request
-    repo = g.get_repo(repo_path)
-    pull_request = repo.get_pull(pr_number)
-
-    # Get the diffs of the pull request
-    diffs = get_pull_request_diffs(pull_request)
-
-    # Format data for OpenAI
-    prompt = format_data_for_openai(diffs)
-
-    # Call OpenAI to get suggestions for code improvement
-    suggestions = call_openai(prompt)
-
-    # Post suggestions as comments on the PR
-    post_comments_to_pull_request(pull_request, suggestions)
-
-if __name__ == '__main__':
-    main()
-
 def get_pull_request_diffs(pull_request):
     return [
         {"filename": file.filename, "patch": file.patch}
@@ -42,7 +15,9 @@ def format_data_for_openai(diffs):
         f"File: {file['filename']}\nDiff:\n{file['patch']}\n"
         for file in diffs
     ])
-    prompt = f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues:\n{changes}"
+    prompt = f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues. If there are no suggestions for improvement, leave a one comment saying that the code is perfect! :\n{changes}"
+
+            
     return prompt
 
 def call_openai(prompt):
@@ -63,7 +38,42 @@ def call_openai(prompt):
 
 def post_comments_to_pull_request(pull_request, comments):
     for comment in comments.split("\n"):
+        print(f"Posting comment: {comment}")
         if comment.strip():
-            # Example: you might need to determine the specific file and line number for each comment
-            pull_request.create_review_comment(comment, pull_request.head.sha, "path/to/file", line_number)
+            # Example: Post comments at the first line of the changed file for simplicity
+            files = pull_request.get_files()
+            for file in files:
+                try:
+                    pull_request.create_review_comment(body=comment, commit_id=pull_request.head.sha, path=file.filename, position=1)
+                except Exception as e:
+                    print(f"Failed to post comment: {e}")
+
+
+def main():
+    # Initialize GitHub API with token
+    g = Github(os.getenv('MY_GITHUB_TOKEN'))
+
+    # Get the repo path and PR number from the environment variables
+    repo_path = os.getenv('REPO_PATH')
+    pr_number = int(os.getenv('PR_NUMBER'))
+    
+    # Get the repo object and pull request
+    repo = g.get_repo(repo_path)
+    pull_request = repo.get_pull(pr_number)
+
+    # Get the diffs of the pull request
+    diffs = get_pull_request_diffs(pull_request)
+
+    # Format data for OpenAI
+    prompt = format_data_for_openai(diffs)
+
+    # Call OpenAI to get suggestions for code improvement
+    suggestions = call_openai(prompt)
+    print(f"Suggestions: {suggestions}")
+
+    # Post suggestions as comments on the PR
+    post_comments_to_pull_request(pull_request, suggestions)
+
+if __name__ == '__main__':
+    main()
 
