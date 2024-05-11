@@ -15,7 +15,9 @@ def format_data_for_openai(diffs):
         f"File: {file['filename']}\nDiff:\n{file['patch']}\n"
         for file in diffs
     ])
-    prompt = f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues:\n{changes}"
+    prompt = f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues. If there are no suggestions for improvement, leave a one comment saying that the code is perfect! :\n{changes}"
+
+            
     return prompt
 
 def call_openai(prompt):
@@ -36,6 +38,7 @@ def call_openai(prompt):
 
 def post_comments_to_pull_request(pull_request, comments):
     for comment in comments.split("\n"):
+        print(f"Posting comment: {comment}")
         if comment.strip():
             # Example: Post comments at the first line of the changed file for simplicity
             files = pull_request.get_files()
@@ -66,6 +69,7 @@ def main():
 
     # Call OpenAI to get suggestions for code improvement
     suggestions = call_openai(prompt)
+    print(f"Suggestions: {suggestions}")
 
     # Post suggestions as comments on the PR
     post_comments_to_pull_request(pull_request, suggestions)
