@@ -54,31 +54,38 @@ def call_openai(prompt):
 def post_comments_to_pull_request(pull_request, comments):
     import re
 
-    # Regular expression to find suggestion blocks within the comments
+    # This regular expression matches the format of each suggestion block
     suggestion_pattern = re.compile(
-        r"Line: (\d+)\n"
-        r"Type: (.+)\n"
-        r"Explanation: (.+)\n"
-        r"Code Suggestions: (.+?)(?=\n\n|\Z)", re.DOTALL
+        r"Line: (\d+).*?Type: (.*?)\nExplanation: (.*?)\nCode Suggestions:\n```(.*?)```",
+        re.DOTALL
     )
 
-    # Find all suggestions within the comments
+    print(f"suggestion_pattern: {suggestion_pattern}")
+    # Find all matches in the comments string
     suggestions = suggestion_pattern.findall(comments)
-    print(f"Suggestions found: {suggestions}")  # Debug print
+    print(f"suggestions: {suggestions}")
 
     for suggestion in suggestions:
+        line, suggestion_type, explanation, code_suggestions = suggestion
+        comment_body = (
+            f"**Type:** {suggestion_type}\n"
+            f"**Explanation:** {explanation}\n"
+            f"**Code Suggestions:**\n```javascript\n{code_suggestions}\n```"
+        )
+        print(f"Posting comment at line {line}: {comment_body}")
+
+        # Post the first line number mentioned
         try:
-            line, change_type, explanation, code_suggestions = suggestion
-            path = 'determined/path/here'  # Assuming you determine or extract path somehow
-            position = int(line)  # Simplification for example purposes
+            first_line = int(line.split(',')[0])  # Handling multiple lines, taking the first
+            print(f"Posting comment at first line {first_line}: {comment_body}")
             pull_request.create_review_comment(
-                body=f"Type: {change_type}\nExplanation: {explanation}\nCode Suggestions: {code_suggestions}",
+                body=comment_body,
                 commit_id=pull_request.head.sha,
-                path=path,
-                position=position
+                path='javascript.js',  # Ensure this is the correct path
+                position=first_line  # This needs to be adjusted if position calculation is required
             )
         except Exception as e:
-            print(f"Failed to post inline comment: {e}")
+            print(f"Failed to post comment at line {line}: {e}")
 
 
 
