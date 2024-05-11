@@ -16,12 +16,14 @@ def format_data_for_openai(diffs):
         f"File: {file['filename']}\nDiff:\n{file['patch']}\n"
         for file in diffs
     ])
-    prompt = f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues.\n\n"
-    "Make a special focus on components and functions that are too big, overly complicated, and can have parts extracted to become more reusable.\n\n"
-    "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
-    "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
-    "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
-    {changes}
+    prompt = (
+        f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues.\n\n"
+        "Make a special focus on components and functions that are too big, overly complicated, and can have parts extracted to become more reusable.\n\n"
+        "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
+        "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
+        "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
+        f"{changes}"
+    )
 
             
     return prompt
