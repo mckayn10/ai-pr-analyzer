@@ -49,30 +49,24 @@ def post_comments_to_pull_request(pull_request, comments):
 
 
 def main():
-    # Initialize GitHub API with token
-    g = Github(os.getenv('GITHUB_TOKEN'))
+    try:
+        g = Github(os.getenv('GITHUB_TOKEN'))  # Initialize GitHub API with token
+        repo_path = os.getenv('REPO_PATH')
+        pr_number = int(os.getenv('PR_NUMBER'))
+        
+        repo = g.get_repo(repo_path)  # Get the repo object
+        pull_request = repo.get_pull(pr_number)  # Get the pull request
 
-    # Get the repo path and PR number from the environment variables
-    repo_path = os.getenv('REPO_PATH')
-    pr_number = int(os.getenv('PR_NUMBER'))
-    
-    # Get the repo object and pull request
-    repo = g.get_repo(repo_path)
-    pull_request = repo.get_pull(pr_number)
+        diffs = get_pull_request_diffs(pull_request)  # Get the diffs of the pull request
+        prompt = format_data_for_openai(diffs)  # Format data for OpenAI
 
-    # Get the diffs of the pull request
-    diffs = get_pull_request_diffs(pull_request)
+        suggestions = call_openai(prompt)  # Call OpenAI to get suggestions for code improvement
+        print(f"Suggestions: {suggestions}")
 
-    # Format data for OpenAI
-    prompt = format_data_for_openai(diffs)
-
-    # Call OpenAI to get suggestions for code improvement
-    suggestions = call_openai(prompt)
-    print(f"Suggestions: {suggestions}")
-
-    # Post suggestions as comments on the PR
-    post_comments_to_pull_request(pull_request, suggestions)
+        post_comments_to_pull_request(pull_request, suggestions)  # Post suggestions as comments on the PR
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
-
