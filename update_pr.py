@@ -17,6 +17,9 @@ pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(name="ai-code-analyzer")
 model="text-embedding-3-large"
 
+client = OpenAI(
+    api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
+)
 
 print("Model loaded successfully")
 def generate_embedding(text, model="text-embedding-3-large"):
@@ -31,7 +34,7 @@ def generate_embedding(text, model="text-embedding-3-large"):
     np.array: A NumPy array of the embedding.
     """
     try:
-        response = openai.Embedding.create(
+        response = client.embeddings.create(
             input=text,
             model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
         )
