@@ -24,18 +24,18 @@ model = AutoModel.from_pretrained("microsoft/codebert-base")
 
 print("Model loaded successfully")
 def generate_embedding(code):
-    inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
-    if torch.cuda.is_available():
-        inputs = {k: v.to('cuda') for k, v in inputs.items()}
-        model.to('cuda')
-    with torch.no_grad():
-        outputs = model(**inputs)
-    embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-
-    if np.issubdtype(embeddings.dtype, np.number):
-        return embeddings.flatten()
-    else:
-        raise ValueError("Embeddings contain non-numeric values")
+    try:
+        response = OpenAI.Embedding.create(
+            model="text-embedding-3-large",
+            input=code,
+            api_key=os.getenv('OPENAI_API_KEY')
+        )
+        # Assuming the response structure has the embedding in a specific location, typically `response['data']`
+        embedding = response['data']['embedding']
+        return np.array(embedding)
+    except Exception as e:
+        print(f"Error in generating embedding: {e}")
+        return None
 
 
 def fetch_and_index_codebase(repo):
@@ -49,15 +49,16 @@ def fetch_and_index_codebase(repo):
                 try:
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
-                    if embedding.dtype.type is np.str_:
-                        raise TypeError("Embedding is not purely numeric.")
-                    print(f"Indexing file {file_content.path}")
-                    print(f"Embedding: {embedding.tolist()}")
-                    index.upsert([(file_content.path, embedding.tolist())])
+                    if embedding is not None and embedding.dtype.type is np.float32:
+                        print(f"Indexing file {file_content.path}")
+                        index.upsert([(file_content.path, embedding.tolist())])
+                    else:
+                        raise ValueError("Invalid embedding data type or embedding generation failed.")
                 except Exception as inner_e:
                     print(f"Failed processing file {file_content.path}: {inner_e}")
     except Exception as e:
         print(f"Error processing repository files: {e}")
+
 
 
 
