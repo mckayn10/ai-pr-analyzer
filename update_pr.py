@@ -8,30 +8,35 @@ from langchain.prompts.prompt import PromptTemplate
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
-import pinecone
-from pinecone import Pinecone, ServerlessSpec
-from transformers import AutoModel, AutoTokenizer
-import torch
+from pinecone import Pinecone
 import openai
 
 # Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(name="ai-code-analyzer")
+model="text-embedding-3-large"
 
-# CodeBERT setup for embeddings
-tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
-model = AutoModel.from_pretrained("microsoft/codebert-base")
 
 print("Model loaded successfully")
-def generate_embedding(code):
+def generate_embedding(text, model="text-embedding-3-large"):
+    """
+    Generate an embedding for the given text using the specified model.
+
+    Args:
+    text (str): The input text to generate an embedding for.
+    model (str): The model to use for generating the embedding. Default is 'text-embedding-3-large'.
+
+    Returns:
+    np.array: A NumPy array of the embedding.
+    """
     try:
         response = openai.Embedding.create(
-            engine="text-embedding-3-large",
-            input=code
+            input=text,
+            model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
         )
-        embeddings = response['data']
-        return np.array(embeddings)
+        embedding = response['data'][0]['embedding']
+        return np.array(embedding)
     except Exception as e:
         print(f"Error in generating embedding: {e}")
         return None
