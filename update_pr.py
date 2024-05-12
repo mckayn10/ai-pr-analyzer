@@ -31,11 +31,6 @@ def generate_embedding(code):
     with torch.no_grad():
         outputs = model(**inputs)
     embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-    
-    # Debugging output
-    # print("Embedding dtype:", embeddings.dtype)  # Check the data type of embeddings
-    # print("Embedding shape:", embeddings.shape)  # Check the shape of embeddings
-    # print("Embedding sample data:", embeddings[:5])  # Print first few elements of the embeddings
 
     if np.issubdtype(embeddings.dtype, np.number):
         return embeddings.flatten()
@@ -75,11 +70,15 @@ def get_pull_request_diffs(pull_request):
 
 
 def format_data_for_openai(diffs):
+    print("Formatting data for OpenAI...")
     embeddings = OpenAIEmbeddings(model="gpt-3.5-turbo-0125", api_key=os.getenv('OPENAI_API_KEY'))
     document_vectorstore = PineconeVectorStore(index_name="codebase", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
     retriever = document_vectorstore.as_retriever()
     context = retriever.invoke(diffs)
+
+    print(f"Context: {context}")
+    print("Generating prompt...")
 
 
     changes = "\n".join([
@@ -101,17 +100,23 @@ def format_data_for_openai(diffs):
         f"{changes}"
     )
 
+    print(f"Prompt: {prompt}")
+
     template = PromptTemplate(template=prompt, input_variables=["context"])
     prompt_with_context = template.invoke({"context": context})
 
+    print(f"Prompt with context: {prompt_with_context}")
+
     llm = ChatOpenAI(temperature=0.5, api_key=os.getenv('OPENAI_API_KEY'))
     results = llm.invoke(prompt_with_context)
+    print(f"Results: {results.content}")
             
     return results.content
 
 def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
     try:
+        print("Making LLM call...")
         if isinstance(prompt, list):
             prompt = ' '.join(map(str, prompt))  # Convert list elements to string if not already, and join them
 
@@ -162,8 +167,10 @@ def main():
         pull_request = repo.get_pull(pr_number)  # Get the pull request
 
         diffs = get_pull_request_diffs(pull_request)  # Get the diffs of the pull request
+        print(f"about to call openai with diffs")
         prompt = format_data_for_openai(diffs)  # Format data for OpenAI
 
+        print(f"about to call openai with prompt")
         suggestions = call_openai(prompt)  # Call OpenAI to get suggestions for code improvement
         print(f"Suggestions: {suggestions}")
 
