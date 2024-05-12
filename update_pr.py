@@ -48,11 +48,12 @@ def fetch_and_index_codebase(repo):
                 if file_content.name.endswith(('.js', '.java', '.cpp')):  # Focus on code files
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
-                    if isinstance(embedding, np.ndarray):
-                        embedding = embedding.tolist()  # Convert to list if still an ndarray
+                    if any(isinstance(x, str) for x in embedding):
+                        raise ValueError("Embedding contains strings, which is not allowed")
                     index.upsert((file_content.path, embedding))
     except Exception as e:
         print(f"Error processing repository files: {e}")
+
 
 
 def get_pull_request_diffs(pull_request):
@@ -100,6 +101,8 @@ def format_data_for_openai(diffs):
 def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
     try:
+        if isinstance(prompt, list):
+            prompt = ' '.join(prompt)
         messages = [
             {"role": "system", "content": "You are an AI trained to help refactor code by giving suggestions for improvements as well as code snippets to replace the existing code."},
             {"role": "user", "content": prompt}
