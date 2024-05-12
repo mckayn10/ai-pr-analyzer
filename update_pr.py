@@ -22,9 +22,8 @@ index = pc.Index(name="ai-code-analyzer")
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
 model = AutoModel.from_pretrained("microsoft/codebert-base")
 
-
+print("Model loaded successfully")
 def generate_embedding(code):
-    # Ensure to handle data types correctly and avoid attribute errors
     inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
     if torch.cuda.is_available():
         inputs = {k: v.to('cuda') for k, v in inputs.items()}
@@ -32,10 +31,17 @@ def generate_embedding(code):
     with torch.no_grad():
         outputs = model(**inputs)
     embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+    
+    # Debugging output
+    # print("Embedding dtype:", embeddings.dtype)  # Check the data type of embeddings
+    # print("Embedding shape:", embeddings.shape)  # Check the shape of embeddings
+    # print("Embedding sample data:", embeddings[:5])  # Print first few elements of the embeddings
+
     if np.issubdtype(embeddings.dtype, np.number):
         return embeddings.flatten()
     else:
         raise ValueError("Embeddings contain non-numeric values")
+
 
 def fetch_and_index_codebase(repo):
     try:
@@ -50,6 +56,8 @@ def fetch_and_index_codebase(repo):
                     embedding = generate_embedding(code)
                     if embedding.dtype.type is np.str_:
                         raise TypeError("Embedding is not purely numeric.")
+                    print(f"Indexing file {file_content.path}")
+                    print(f"Embedding: {embedding.tolist()}")
                     index.upsert((file_content.path, embedding.tolist()))  # Ensure embedding is a list of floats
                 except Exception as inner_e:
                     print(f"Failed processing file {file_content.path}: {inner_e}")
@@ -105,7 +113,10 @@ def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
     try:
         if isinstance(prompt, list):
-            prompt = ' '.join(prompt)  # This ensures the prompt is a single string
+            prompt = ' '.join(map(str, prompt))  # Convert list elements to string if not already, and join them
+
+        print(f"Prompt: {prompt}")
+
 
         messages = [
             {"role": "system", "content": "You are an AI trained to help refactor code by giving suggestions for improvements as well as code snippets to replace the existing code."},
@@ -138,6 +149,7 @@ def post_comments_to_pull_request(pull_request, comments):
 
 def main():
     try:
+        print("Starting the code analysis process...")
         g = Github(os.getenv('GITHUB_TOKEN'))  # Initialize GitHub API with token
         repo_path = os.getenv('REPO_PATH')
         repo = g.get_repo(repo_path)  # Get the repo object
