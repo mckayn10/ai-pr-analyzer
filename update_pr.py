@@ -72,10 +72,20 @@ def get_pull_request_diffs(pull_request):
 def format_data_for_openai(diffs):
     print("Formatting data for OpenAI...")
     embeddings = OpenAIEmbeddings(model="gpt-3.5-turbo-0125", api_key=os.getenv('OPENAI_API_KEY'))
+
+    print("Embeddings created successfully")
+
     document_vectorstore = PineconeVectorStore(index_name="codebase", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
+    print("Retrieving context...")
+
     retriever = document_vectorstore.as_retriever()
+
+    print("Retriever created successfully")
+
     context = retriever.invoke(diffs)
+
+
 
     print(f"Context: {context}")
     print("Generating prompt...")
