@@ -24,7 +24,6 @@ model = AutoModel.from_pretrained("microsoft/codebert-base")
 
 
 def generate_embedding(code):
-    # Ensure to handle data types correctly and avoid attribute errors
     inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
     if torch.cuda.is_available():
         inputs = {k: v.to('cuda') for k, v in inputs.items()}
@@ -32,10 +31,17 @@ def generate_embedding(code):
     with torch.no_grad():
         outputs = model(**inputs)
     embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+    
+    # Debugging output
+    print("Embedding dtype:", embeddings.dtype)  # Check the data type of embeddings
+    print("Embedding shape:", embeddings.shape)  # Check the shape of embeddings
+    print("Embedding sample data:", embeddings[:5])  # Print first few elements of the embeddings
+
     if np.issubdtype(embeddings.dtype, np.number):
         return embeddings.flatten()
     else:
         raise ValueError("Embeddings contain non-numeric values")
+
 
 def fetch_and_index_codebase(repo):
     try:
