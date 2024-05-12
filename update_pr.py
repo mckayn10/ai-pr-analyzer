@@ -33,9 +33,9 @@ def generate_embedding(code):
     embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
     
     # Debugging output
-    print("Embedding dtype:", embeddings.dtype)  # Check the data type of embeddings
-    print("Embedding shape:", embeddings.shape)  # Check the shape of embeddings
-    print("Embedding sample data:", embeddings[:5])  # Print first few elements of the embeddings
+    # print("Embedding dtype:", embeddings.dtype)  # Check the data type of embeddings
+    # print("Embedding shape:", embeddings.shape)  # Check the shape of embeddings
+    # print("Embedding sample data:", embeddings[:5])  # Print first few elements of the embeddings
 
     if np.issubdtype(embeddings.dtype, np.number):
         return embeddings.flatten()
@@ -56,6 +56,8 @@ def fetch_and_index_codebase(repo):
                     embedding = generate_embedding(code)
                     if embedding.dtype.type is np.str_:
                         raise TypeError("Embedding is not purely numeric.")
+                    print(f"Indexing file {file_content.path}")
+                    print(f"Embedding: {embedding.tolist()}")
                     index.upsert((file_content.path, embedding.tolist()))  # Ensure embedding is a list of floats
                 except Exception as inner_e:
                     print(f"Failed processing file {file_content.path}: {inner_e}")
@@ -111,7 +113,10 @@ def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
     try:
         if isinstance(prompt, list):
-            prompt = ' '.join(prompt)  # This ensures the prompt is a single string
+            prompt = ' '.join(map(str, prompt))  # Convert list elements to string if not already, and join them
+
+        print(f"Prompt: {prompt}")
+
 
         messages = [
             {"role": "system", "content": "You are an AI trained to help refactor code by giving suggestions for improvements as well as code snippets to replace the existing code."},
