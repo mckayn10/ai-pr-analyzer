@@ -83,7 +83,12 @@ def format_data_for_openai(diffs):
 
     print("Retriever created successfully")
 
-    context = retriever.invoke(diffs)
+    formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
+
+
+
+
+    context = retriever.invoke(formatted_text)
 
 
 
