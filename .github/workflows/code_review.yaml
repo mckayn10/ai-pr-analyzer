@@ -25,6 +25,7 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
                   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+                  PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
                   REPO_PATH: ${{ github.repository }}
                   PR_NUMBER: ${{ github.event.pull_request.number }}
               run: python update_pr.py
