@@ -144,6 +144,7 @@ def post_comments_to_pull_request(pull_request, comments):
 
 def main():
     try:
+        print("Starting the code analysis process...")
         g = Github(os.getenv('GITHUB_TOKEN'))  # Initialize GitHub API with token
         repo_path = os.getenv('REPO_PATH')
         repo = g.get_repo(repo_path)  # Get the repo object
