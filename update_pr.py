@@ -22,7 +22,7 @@ index = pc.Index(name="ai-code-analyzer")
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
 model = AutoModel.from_pretrained("microsoft/codebert-base")
 
-
+print("Model loaded successfully")
 def generate_embedding(code):
     inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
     if torch.cuda.is_available():
