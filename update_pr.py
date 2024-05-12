@@ -16,7 +16,7 @@ import torch
 # Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(name="codebase")
+index = pc.Index(name="ai-code-analyzer")
 
 # CodeBERT setup for embeddings
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
@@ -71,11 +71,11 @@ def get_pull_request_diffs(pull_request):
 
 def format_data_for_openai(diffs):
     print("Formatting data for OpenAI...")
-    embeddings = OpenAIEmbeddings(model="gpt-3.5-turbo-0125", api_key=os.getenv('OPENAI_API_KEY'))
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv('OPENAI_API_KEY'))
 
     print("Embeddings created successfully")
 
-    document_vectorstore = PineconeVectorStore(index_name="codebase", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
+    document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
     print("Retrieving context...")
 
@@ -86,9 +86,10 @@ def format_data_for_openai(diffs):
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
 
-
-
-    context = retriever.invoke(formatted_text)
+    try:
+        context = retriever.invoke(formatted_text)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 
