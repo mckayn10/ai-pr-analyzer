@@ -58,7 +58,7 @@ def fetch_and_index_codebase(repo):
                         raise TypeError("Embedding is not purely numeric.")
                     print(f"Indexing file {file_content.path}")
                     print(f"Embedding: {embedding.tolist()}")
-                    index.upsert((file_content.path, embedding.tolist()))  # Ensure embedding is a list of floats
+                    index.upsert([(file_content.path, embedding.tolist())])
                 except Exception as inner_e:
                     print(f"Failed processing file {file_content.path}: {inner_e}")
     except Exception as e:
