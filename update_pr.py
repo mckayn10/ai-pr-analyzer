@@ -9,47 +9,33 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
 import pinecone
+from pinecone import Pinecone, ServerlessSpec
 from transformers import AutoModel, AutoTokenizer
 import torch
 
-# Initialize Pinecone
+# Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+pc = Pinecone(api_key=PINECONE_API_KEY)
+index = pc.Index(name="ai-code-analyzer")
 
-pinecone.init(api_key=PINECONE_API_KEY)
-index = pinecone.Index("ai-code-analyzer")
+# CodeBERT setup for embeddings
+tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
+model = AutoModel.from_pretrained("microsoft/codebert-base")
+
 
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
 model = AutoModel.from_pretrained("microsoft/codebert-base")
 
 def generate_embedding(code):
-    """
-    Generate an embedding for the given code snippet.
-
-    Args:
-    code (str): A string of source code.
-
-    Returns:
-    numpy.ndarray: A 1D array representing the generated embedding.
-    """
-    # Encode the code using the tokenizer
+    # Ensure to handle data types correctly and avoid attribute errors
     inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
-
-    # Move the tensor to GPU if available
     if torch.cuda.is_available():
         inputs = {k: v.to('cuda') for k, v in inputs.items()}
         model.to('cuda')
-
-    # Generate embeddings with the model
     with torch.no_grad():
         outputs = model(**inputs)
-
-    # Use the mean pooling on the output token embeddings
     embeddings = outputs.last_hidden_state.mean(dim=1)
-
-    # Move the embeddings back to CPU and convert to numpy for Pinecone compatibility
-    embeddings = embeddings.cpu().numpy()
-
-    return embeddings.flatten()
+    return embeddings.cpu().numpy().flatten()  # Return a flattened numpy array
 
 def fetch_and_index_codebase(repo):
     try:
@@ -59,12 +45,12 @@ def fetch_and_index_codebase(repo):
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
             else:
-                # Process only code files; adjust the file extension as necessary
-                if file_content.name.endswith(('.js', '.java', '.cpp')):  # Add other file types as needed
+                if file_content.name.endswith(('.js', '.java', '.cpp')):  # Focus on code files
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
-                    # Ensure the embeddings are stored with appropriate identifiers
-                    index.upsert((file_content.path, embedding.flatten().tolist()))
+                    if isinstance(embedding, np.ndarray):
+                        embedding = embedding.tolist()  # Convert to list if still an ndarray
+                    index.upsert((file_content.path, embedding))
     except Exception as e:
         print(f"Error processing repository files: {e}")
 
@@ -81,7 +67,7 @@ def format_data_for_openai(diffs):
     document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
     retriever = document_vectorstore.as_retriever()
-    context = retriever.get_relevant_documents(diffs)
+    context = retriever.invoke(diffs)
 
 
     changes = "\n".join([
