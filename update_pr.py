@@ -1,9 +1,73 @@
 import os
 import sys
 from github import Github
+import numpy as np
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
+from langchain.prompts.prompt import PromptTemplate
+from langchain_openai import OpenAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
+import pinecone
+from transformers import AutoModel, AutoTokenizer
+import torch
+
+# Initialize Pinecone
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+
+pinecone.init(api_key=PINECONE_API_KEY)
+index = pinecone.Index("ai-code-analyzer")
+
+tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
+model = AutoModel.from_pretrained("microsoft/codebert-base")
+
+def generate_embedding(code):
+    """
+    Generate an embedding for the given code snippet.
+
+    Args:
+    code (str): A string of source code.
+
+    Returns:
+    numpy.ndarray: A 1D array representing the generated embedding.
+    """
+    # Encode the code using the tokenizer
+    inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
+
+    # Move the tensor to GPU if available
+    if torch.cuda.is_available():
+        inputs = {k: v.to('cuda') for k, v in inputs.items()}
+        model.to('cuda')
+
+    # Generate embeddings with the model
+    with torch.no_grad():
+        outputs = model(**inputs)
+
+    # Use the mean pooling on the output token embeddings
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+
+    # Move the embeddings back to CPU and convert to numpy for Pinecone compatibility
+    embeddings = embeddings.cpu().numpy()
+
+    return embeddings.flatten()
+
+def fetch_and_index_codebase(repo):
+    try:
+        contents = repo.get_contents("")
+        while contents:
+            file_content = contents.pop(0)
+            if file_content.type == "dir":
+                contents.extend(repo.get_contents(file_content.path))
+            else:
+                # Process only code files; adjust the file extension as necessary
+                if file_content.name.endswith(('.js', '.java', '.cpp')):  # Add other file types as needed
+                    code = file_content.decoded_content.decode('utf-8')
+                    embedding = generate_embedding(code)
+                    # Ensure the embeddings are stored with appropriate identifiers
+                    index.upsert((file_content.path, embedding.flatten().tolist()))
+    except Exception as e:
+        print(f"Error processing repository files: {e}")
+
 
 def get_pull_request_diffs(pull_request):
     return [
@@ -13,6 +77,13 @@ def get_pull_request_diffs(pull_request):
 
 
 def format_data_for_openai(diffs):
+    embeddings = OpenAIEmbeddings(model="gpt-3.5-turbo-0125", api_key=os.getenv('OPENAI_API_KEY'))
+    document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
+
+    retriever = document_vectorstore.as_retriever()
+    context = retriever.get_relevant_documents(diffs)
+
+
     changes = "\n".join([
         f"File: {file['filename']}\nDiff:\n{file['patch']}\n"
         for file in diffs
@@ -32,8 +103,13 @@ def format_data_for_openai(diffs):
         f"{changes}"
     )
 
+    template = PromptTemplate(template=prompt, input_variables=["context"])
+    prompt_with_context = template.invoke({"context": context})
+
+    llm = ChatOpenAI(temperature=0.5, api_key=os.getenv('OPENAI_API_KEY'))
+    results = llm.invoke(prompt_with_context)
             
-    return prompt
+    return results.content
 
 def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
@@ -63,13 +139,21 @@ def post_comments_to_pull_request(pull_request, comments):
 
 
 
+
+
+
+
 def main():
     try:
         g = Github(os.getenv('GITHUB_TOKEN'))  # Initialize GitHub API with token
         repo_path = os.getenv('REPO_PATH')
-        pr_number = int(os.getenv('PR_NUMBER'))
-        
         repo = g.get_repo(repo_path)  # Get the repo object
+
+        # Fetch and index the codebase at the start or update if necessary
+        fetch_and_index_codebase(repo)
+        
+        
+        pr_number = int(os.getenv('PR_NUMBER'))
         pull_request = repo.get_pull(pr_number)  # Get the pull request
 
         diffs = get_pull_request_diffs(pull_request)  # Get the diffs of the pull request
