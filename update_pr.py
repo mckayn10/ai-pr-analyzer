@@ -16,7 +16,7 @@ import torch
 # Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index(name="ai-code-analyzer")
+index = pc.Index(name="codebase")
 
 # CodeBERT setup for embeddings
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
@@ -76,7 +76,7 @@ def get_pull_request_diffs(pull_request):
 
 def format_data_for_openai(diffs):
     embeddings = OpenAIEmbeddings(model="gpt-3.5-turbo-0125", api_key=os.getenv('OPENAI_API_KEY'))
-    document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
+    document_vectorstore = PineconeVectorStore(index_name="codebase", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
     retriever = document_vectorstore.as_retriever()
     context = retriever.invoke(diffs)
