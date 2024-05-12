@@ -12,6 +12,7 @@ import pinecone
 from pinecone import Pinecone, ServerlessSpec
 from transformers import AutoModel, AutoTokenizer
 import torch
+import openai
 
 # Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
@@ -25,17 +26,16 @@ model = AutoModel.from_pretrained("microsoft/codebert-base")
 print("Model loaded successfully")
 def generate_embedding(code):
     try:
-        response = OpenAI.Embedding.create(
-            model="text-embedding-3-large",
-            input=code,
-            api_key=os.getenv('OPENAI_API_KEY')
+        response = openai.Embedding.create(
+            engine="text-embedding-3-large",
+            input=code
         )
-        # Assuming the response structure has the embedding in a specific location, typically `response['data']`
-        embedding = response['data']['embedding']
-        return np.array(embedding)
+        embeddings = response['data']
+        return np.array(embeddings)
     except Exception as e:
         print(f"Error in generating embedding: {e}")
         return None
+
 
 
 def fetch_and_index_codebase(repo):
@@ -81,7 +81,7 @@ def format_data_for_openai(diffs):
 
     try:
         context = retriever.invoke(formatted_text)
-        print(f"Context retrieved successfully: {context[:100]}")  # Print a snippet of the context for debugging
+        print(f"Context retrieved successfully: {str(context)[:100]}")  # Convert context to string and print snippet
     except Exception as e:
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
@@ -90,7 +90,7 @@ def format_data_for_openai(diffs):
     prompt = (
         "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
         "and point out areas that could cause potential bugs and performance issues.\n\n"
-        "Context of changes:\n" + context +  # Using the context directly in the prompt
+        "Context of changes:\n" + str(context) +  # Convert context to string before concatenating
         "\n\nDetailed changes:\n" + changes +
         "\n\nProvide suggestions based on the details and context provided above."
     )
@@ -105,6 +105,7 @@ def format_data_for_openai(diffs):
         return "Failed to generate suggestions due to an error."
 
     return results.content
+
 
 
 def call_openai(prompt):
