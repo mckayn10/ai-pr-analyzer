@@ -16,8 +16,15 @@ Embrace your creativity and personalize this project to craft a solution that un
 3. **Integration with Existing Tools:** Develop integrations for the agent with commonly used development tools and platforms (e.g., Confluence, Jira, Notion) to streamline workflows and increase accessibility.
 4. **Add The Features You Want**: Let your creativity shine by adding a unique feature that significantly simplifies or enhances your daily routines. Innovate with functionalities that solve problems and improve efficiency or satisfaction in meaningful ways.
 
+### Updated Functionality
+- Added a function for managing the cart in the `javascript.js` file.
+- Implemented functions for adding, removing, and updating products in the cart.
+- Enhanced the cart display functionality for a better user experience.
+
 ## Privacy and Submission Guidelines
 - **Submission Requirements:** Please submit a link to your public repo with your implementation or a loom video showcasing your work on the [BloomTech AI Platform](app.bloomtech.com). 
 - **Sensitive Information:** If your implementation involves sensitive information, you are not required to submit a public repository. Instead, a detailed review of your project through a Loom video is acceptable, where you can demonstrate the functionality and discuss the technologies used without exposing confidential data.
 
 ---
+
+Consider the code changes and commit messages, I have updated the README to reflect the changes made in the code related to managing the cart functionality in the project.
