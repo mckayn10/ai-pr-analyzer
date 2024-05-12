@@ -44,15 +44,18 @@ def fetch_and_index_codebase(repo):
             file_content = contents.pop(0)
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
-            else:
-                if file_content.name.endswith(('.js', '.java', '.cpp')):  # Focus on code files
+            elif file_content.name.endswith(('.js', '.java', '.cpp')):
+                try:
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
-                    if any(isinstance(x, str) for x in embedding):
-                        raise ValueError("Embedding contains strings, which is not allowed")
-                    index.upsert((file_content.path, embedding))
+                    if embedding.dtype.type is np.str_:
+                        raise TypeError("Embedding is not purely numeric.")
+                    index.upsert((file_content.path, embedding.tolist()))  # Ensure embedding is a list of floats
+                except Exception as inner_e:
+                    print(f"Failed processing file {file_content.path}: {inner_e}")
     except Exception as e:
         print(f"Error processing repository files: {e}")
+
 
 
 
