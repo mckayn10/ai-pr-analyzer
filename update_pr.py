@@ -68,6 +68,12 @@ def fetch_and_index_codebase(repo):
                 if file_content.name.endswith(('.js', '.java', '.cpp')):  # Add other file types as needed
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
+                    embedding = generate_embedding(code)
+                    if isinstance(embedding, np.ndarray):
+                        embedding = embedding.tolist()  # Convert numpy array to list if necessary
+                    if any(isinstance(i, str) for i in embedding):  # Check if any values are strings
+                        raise ValueError("Embedding contains strings, which is not allowed")
+
                     # Ensure the embeddings are stored with appropriate identifiers
                     index.upsert((file_content.path, embedding.flatten().tolist()))
     except Exception as e:
@@ -86,7 +92,7 @@ def format_data_for_openai(diffs):
     document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
 
     retriever = document_vectorstore.as_retriever()
-    context = retriever.get_relevant_documents(diffs)
+    context = retriever.invoke(diffs)
 
 
     changes = "\n".join([
