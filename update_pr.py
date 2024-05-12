@@ -72,64 +72,39 @@ def get_pull_request_diffs(pull_request):
 def format_data_for_openai(diffs):
     print("Formatting data for OpenAI...")
     embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv('OPENAI_API_KEY'))
-
-    print("Embeddings created successfully")
-
     document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
-
-    print("Retrieving context...")
-
     retriever = document_vectorstore.as_retriever()
 
-    print("Retriever created successfully")
-
+    print("Retrieving context...")
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
-
 
     try:
         context = retriever.invoke(formatted_text)
+        print(f"Context retrieved successfully: {context[:100]}")  # Print a snippet of the context for debugging
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"An unexpected error occurred while retrieving context: {e}")
+        return None
 
-
-
-    print(f"Context: {context}")
-    print("Generating prompt...")
-
-
-    changes = "\n".join([
-        f"File: {file['filename']}\nDiff:\n{file['patch']}\n"
-        for file in diffs
-    ])
+    changes = "\n".join([f"File: {file['filename']}\nDiff:\n{file['patch']}" for file in diffs])
     prompt = (
-        f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues.\n\n"
-        "Use the context provided to understand the code changes and suggest improvements based on the context.\n\n"
-        "Make a special focus on components and functions that are too big, overly complicated, and can have parts extracted to become more reusable.\n\n"
-        "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
-        "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
-        "The format for each suggestion should be as follows:\n"
-        "File Path: [file path]\n"
-        "Type: [type of change]\n"
-        "Explanation: [brief explanation]\n"
-        "Code Suggestions: [code snippets to replace the existing code for this specific suggestion]\n\n"
-        "If there are multiple suggestions for the same line, separate them with a comma.\n\n"
-        "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
-        f"{changes}"
-        f"\n\nContext: {context}"
+        "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
+        "and point out areas that could cause potential bugs and performance issues.\n\n"
+        "Context of changes:\n" + context +  # Using the context directly in the prompt
+        "\n\nDetailed changes:\n" + changes +
+        "\n\nProvide suggestions based on the details and context provided above."
     )
 
-    print(f"Prompt: {prompt}")
-
-    template = PromptTemplate(template=prompt)
-    prompt_with_context = template.invoke(context=context)
-
-    print(f"Prompt with context: {prompt_with_context}")
-
+    print("Generating suggestions using AI...")
     llm = ChatOpenAI(temperature=0.5, api_key=os.getenv('OPENAI_API_KEY'))
-    results = llm.invoke(prompt_with_context)
-    print(f"Results: {results.content}")
-            
+    try:
+        results = llm.invoke(prompt)
+        print(f"Results: {results.content}")
+    except Exception as e:
+        print(f"Error invoking AI model: {e}")
+        return "Failed to generate suggestions due to an error."
+
     return results.content
+
 
 def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
