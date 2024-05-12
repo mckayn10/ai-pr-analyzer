@@ -9,14 +9,19 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
 import pinecone
+from pinecone import Pinecone, ServerlessSpec
 from transformers import AutoModel, AutoTokenizer
 import torch
 
-# Initialize Pinecone
+# Pinecone setup
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+pc = Pinecone(api_key=PINECONE_API_KEY)
+index = pc.Index(name="ai-code-analyzer")
 
-pinecone.init(api_key=PINECONE_API_KEY)
-index = pinecone.Index("ai-code-analyzer")
+# CodeBERT setup for embeddings
+tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
+model = AutoModel.from_pretrained("microsoft/codebert-base")
+
 
 tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
 model = AutoModel.from_pretrained("microsoft/codebert-base")
