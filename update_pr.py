@@ -103,6 +103,7 @@ def format_data_for_openai(diffs):
     ])
     prompt = (
         f"Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, and pointing out areas that could cause potential bugs and performance issues.\n\n"
+        "Use the context provided to understand the code changes and suggest improvements based on the context.\n\n"
         "Make a special focus on components and functions that are too big, overly complicated, and can have parts extracted to become more reusable.\n\n"
         "Also, point out any code that is redundant, unnecessary, or can be replaced with more efficient alternatives.\n\n"
         "For each suggestion, provide the line number where the change should be made, the type of change that should be made, and a brief explanation of why the change is necessary.\n\n"
@@ -114,12 +115,13 @@ def format_data_for_openai(diffs):
         "If there are multiple suggestions for the same line, separate them with a comma.\n\n"
         "If there are no suggestions for improvement, leave a one comment saying that the code is perfect!:\n"
         f"{changes}"
+        f"\n\nContext: {context}"
     )
 
     print(f"Prompt: {prompt}")
 
-    template = PromptTemplate(template=prompt, input_variables=["context"])
-    prompt_with_context = template.invoke({"context": context})
+    template = PromptTemplate(template=prompt)
+    prompt_with_context = template.invoke(context=context)
 
     print(f"Prompt with context: {prompt_with_context}")
 
