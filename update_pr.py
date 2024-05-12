@@ -23,9 +23,6 @@ tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
 model = AutoModel.from_pretrained("microsoft/codebert-base")
 
 
-tokenizer = AutoTokenizer.from_pretrained("microsoft/codebert-base")
-model = AutoModel.from_pretrained("microsoft/codebert-base")
-
 def generate_embedding(code):
     # Ensure to handle data types correctly and avoid attribute errors
     inputs = tokenizer(code, return_tensors="pt", max_length=512, truncation=True, padding="max_length")
@@ -34,8 +31,11 @@ def generate_embedding(code):
         model.to('cuda')
     with torch.no_grad():
         outputs = model(**inputs)
-    embeddings = outputs.last_hidden_state.mean(dim=1)
-    return embeddings.cpu().numpy().flatten()  # Return a flattened numpy array
+    embeddings = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+    if np.issubdtype(embeddings.dtype, np.number):
+        return embeddings.flatten()
+    else:
+        raise ValueError("Embeddings contain non-numeric values")
 
 def fetch_and_index_codebase(repo):
     try:
@@ -102,7 +102,8 @@ def call_openai(prompt):
     client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'), model="gpt-3.5-turbo-0125")
     try:
         if isinstance(prompt, list):
-            prompt = ' '.join(prompt)
+            prompt = ' '.join(prompt)  # This ensures the prompt is a single string
+
         messages = [
             {"role": "system", "content": "You are an AI trained to help refactor code by giving suggestions for improvements as well as code snippets to replace the existing code."},
             {"role": "user", "content": prompt}
