@@ -38,9 +38,11 @@ def generate_embedding(text, model="text-embedding-3-large"):
 
     try:
         response = client.embeddings.create(
-            input=text,
+            input=[text],
             model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
         )
+        print(f"response: {response}")
+        print(f"Embedding generated successfully: {response['data'][0]['embedding'][:10]}")
         embedding = response['data'][0]['embedding']
         return np.array(embedding)
     except Exception as e:
