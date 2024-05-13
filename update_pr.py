@@ -87,10 +87,11 @@ def format_data_for_openai(diffs):
     document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
     retriever = document_vectorstore.as_retriever()
 
-    print("Retrieving context...")
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
+    print(f"Formatted text: {formatted_text}")
 
     try:
+        print("Retrievin‘g context...")
         context_response = retriever.invoke(formatted_text)
         print(f"Context response: {context_response}")
         # Properly check and extract metadata if available
