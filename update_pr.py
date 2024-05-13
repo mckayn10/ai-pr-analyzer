@@ -63,7 +63,7 @@ def fetch_and_index_codebase(repo):
                 try:
                     code = file_content.decoded_content.decode('utf-8')
                     embedding = generate_embedding(code)
-                    if embedding is not None and embedding.dtype.type is np.float32:
+                    if embedding is not None:
                         print(f"Indexing file {file_content.path}")
                         index.upsert([(file_content.path, embedding.tolist())])
                     else:
