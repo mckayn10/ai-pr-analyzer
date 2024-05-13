@@ -33,6 +33,9 @@ def generate_embedding(text, model="text-embedding-3-large"):
     Returns:
     np.array: A NumPy array of the embedding.
     """
+
+    print(f"Generating embedding for text: {text}")
+
     try:
         response = client.embeddings.create(
             input=text,
