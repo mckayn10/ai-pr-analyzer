@@ -42,8 +42,9 @@ def generate_embedding(text, model="text-embedding-3-large"):
             model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
         )
         print(f"response: {response}")
-        print(f"Embedding generated successfully: {response['data'][0]['embedding'][:10]}")
-        embedding = response['data'][0]['embedding']
+        print(f"Embedding generated successfully: {response.data[0].embedding[:10]}")
+        embedding = response.data[0].embedding
+        print(f"Embedding generated successfully: {embedding[:10]}")  # Print first 10 elements
         return np.array(embedding)
     except Exception as e:
         print(f"Error in generating embedding: {e}")
