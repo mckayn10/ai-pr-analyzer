@@ -62,7 +62,7 @@ def fetch_and_index_codebase(repo):
                     embedding = generate_embedding(code)
                     if embedding is not None:
                         print(f"Indexing file {file_content.path}")
-                        index.upsert([(file_content.path, embedding.tolist(), {'additional_info': 'your metadata here'})])
+                        index.upsert([(file_content.path, embedding.tolist())])
                     else:
                         raise ValueError("Invalid embedding data type or embedding generation failed.")
                 except Exception as inner_e:
@@ -108,9 +108,10 @@ def format_data_for_openai(diffs):
     prompt = (
         "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
         "and point out areas that could cause potential bugs and performance issues.\n\n"
+        "Also check the context and make sure the new code changes are not conflicting with the existing code and does not create duplicate code.\n\n"
+        "Each suggestion should be concise and limitied to a few short sentences of explanation followed by a code snippet if applicable. Make sure to reference the file where the suggestion should be made\n\n"
         "Context of changes:\n" + str(context) +  # Convert context to string before concatenating
-        "\n\nDetailed changes:\n" + changes +
-        "\n\nProvide suggestions based on the details and context provided above."
+        "\n\nDetailed changes:\n" + changes + "\n\n"
     )
 
     print("Generating suggestions using AI...")
