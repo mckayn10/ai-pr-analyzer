@@ -41,10 +41,7 @@ def generate_embedding(text, model="text-embedding-3-large"):
             input=[text],
             model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
         )
-        print(f"response: {response}")
-        print(f"Embedding generated successfully: {response.data[0].embedding[:10]}")
         embedding = response.data[0].embedding
-        print(f"Embedding generated successfully: {embedding[:10]}")  # Print first 10 elements
         return np.array(embedding)
     except Exception as e:
         print(f"Error in generating embedding: {e}")
@@ -65,7 +62,7 @@ def fetch_and_index_codebase(repo):
                     embedding = generate_embedding(code)
                     if embedding is not None:
                         print(f"Indexing file {file_content.path}")
-                        index.upsert([(file_content.path, embedding.tolist())])
+                        index.upsert([(file_content.path, embedding.tolist(), {'additional_info': 'your metadata here'})])
                     else:
                         raise ValueError("Invalid embedding data type or embedding generation failed.")
                 except Exception as inner_e:
@@ -94,8 +91,15 @@ def format_data_for_openai(diffs):
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
     try:
-        context = retriever.invoke(formatted_text)
-        print(f"Context retrieved successfully: {str(context)[:100]}")  # Convert context to string and print snippet
+        context_response = retriever.invoke(formatted_text)
+        print(f"Context response: {context_response}")
+        # Properly check and extract metadata if available
+        if context_response and context_response.matches:
+            context = ' '.join([match.metadata.get('additional_info', 'No metadata found') for match in context_response.matches])
+            print(f"Context retrieved successfully: {context[:100]}")
+        else:
+            print("No context found")
+            context = "No relevant context available."
     except Exception as e:
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
