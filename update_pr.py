@@ -94,8 +94,22 @@ def format_data_for_openai(diffs):
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
     try:
-        context = retriever.invoke(formatted_text)
-        print(f"Context retrieved successfully: {str(context)[:100]}")  # Convert context to string and print snippet
+        context_response = retriever.invoke(formatted_text)
+        print(f"Context response: {context_response}")
+        
+        # Inspect the structure of the response
+        if context_response and hasattr(context_response, 'matches'):
+            matches = context_response.matches
+            print(f"Matches found: {len(matches)}")
+            for match in matches:
+                print(f"Match metadata: {match.metadata if hasattr(match, 'metadata') else 'No metadata found'}")
+                
+            # Extract context from matches
+            context = ' '.join([match.metadata.get('text', 'No metadata found') for match in matches if hasattr(match, 'metadata')])
+            print(f"Context retrieved successfully: {context[:100]}")  # Print the first 100 characters of context
+        else:
+            print("No relevant context found")
+            context = "No relevant context available."
     except Exception as e:
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
