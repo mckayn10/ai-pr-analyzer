@@ -102,8 +102,12 @@ def format_data_for_openai(diffs):
     template = PromptTemplate(
         template=
             "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
-            "and point out areas that could cause potential bugs and performance issues.\n\nContext of changes: {context}\n\nDetailed changes: "
-            "{changes}\n\nProvide suggestions based on the details and context provided above.", input_variables=["context", "changes"])
+            "and point out areas that could cause potential bugs and performance issues. Also point out if the new code in changes is duplicated based on the context. "
+            "Keep the suggestions concise and clear and limit the suggestions to just 1 or 2 sentences."
+            "Add suggestions for error handling, code optimization, and code readability improvements."
+            "\n\nContext of changes: {context}\n\nDetailed changes: {changes}\n\n "
+            "Provide suggestions based on the details and context provided above and only make suggestions for the new code changes, and do not suggest changes for code in the context", input_variables=["context", "changes"])
+
 
     prompt_with_context = template.invoke({"context": context, "changes": changes})
 
