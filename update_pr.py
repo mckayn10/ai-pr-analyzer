@@ -86,6 +86,8 @@ def format_data_for_openai(diffs):
     print("Retrieving context...")
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
+    print(f"Formatted text: {formatted_text}")
+
     try:
         context = retriever.get_relevant_documents(formatted_text)
         print(f"Context response: {context}")
@@ -101,7 +103,7 @@ def format_data_for_openai(diffs):
         template=
             "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
             "and point out areas that could cause potential bugs and performance issues.\n\nContext of changes: {context}\n\nDetailed changes: "
-            "{changes}\n\nProvide suggestions based on the details and context provided above.", input_variables={"context": context, "changes": changes})
+            "{changes}\n\nProvide suggestions based on the details and context provided above.", input_variables=["context", "changes"])
 
     prompt_with_context = template.invoke({"context": context, "changes": changes})
 
