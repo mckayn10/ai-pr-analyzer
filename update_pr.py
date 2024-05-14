@@ -10,7 +10,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
 from pinecone import Pinecone
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import Document
+from langchain.schema import Document
 
 
 import openai
