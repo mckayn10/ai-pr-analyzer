@@ -10,6 +10,8 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
 from pinecone import Pinecone
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import Document
+
 
 import openai
 
@@ -27,7 +29,8 @@ client = OpenAI(
 def generate_embedding(text, model="text-embedding-3-large"):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
-    documents = text_splitter.split_documents(text)
+    document = Document(page_content=text)
+    documents = text_splitter.split_documents([document])
 
     print(f"Going to add {len(documents)} to Pinecone.")
     print(f"Documents: {documents}")
