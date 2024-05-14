@@ -52,6 +52,8 @@ def fetch_and_index_codebase(repo):
             elif file_content.name.endswith(('.js', '.java', '.cpp')):
                 try:
                     code = file_content.decoded_content.decode('utf-8')
+                    print(f"Processing file {file_content.path}")
+                    print(f"Code: {code}")
                     generate_embedding(code)
                 
                 except Exception as inner_e:
