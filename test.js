@@ -9,7 +9,7 @@ function processTransaction(amount, account) {
 		return false;
 	}
 
-	// Calculate new balance
+	// Calculate new balance here
 	const newBalance = account.balance + amount;
 
 	// Log transaction
