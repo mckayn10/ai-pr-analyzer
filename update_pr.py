@@ -9,6 +9,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.output_parsers.string import StrOutputParser
 from pinecone import Pinecone
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 import openai
 
 # Pinecone setup
@@ -21,34 +23,22 @@ client = OpenAI(
     api_key=os.environ['OPENAI_API_KEY'],  # this is also the default, it can be omitted
 )
 
-print("Model loaded successfully")
+
 def generate_embedding(text, model="text-embedding-3-large"):
-    """
-    Generate an embedding for the given text using the specified model.
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
-    Args:
-    text (str): The input text to generate an embedding for.
-    model (str): The model to use for generating the embedding. Default is 'text-embedding-3-large'.
+    documents = text_splitter.split_documents(text)
 
-    Returns:
-    np.array: A NumPy array of the embedding.
-    """
+    print(f"Going to add {len(documents)} to Pinecone.")
+    print(f"Documents: {documents}")
 
-    print(f"Generating embedding for text: {text}")
+    embeddings = OpenAIEmbeddings(model='text-embedding-3-large', api_key=os.getenv('OPENAI_API_KEY'))
 
-    try:
-        response = client.embeddings.create(
-            input=[text],
-            model=model  # Choose "text-embedding-3-small" or "text-embedding-3-large"
-        )
-        print(f"response: {response}")
-        print(f"Embedding generated successfully: {response.data[0].embedding[:10]}")
-        embedding = response.data[0].embedding
-        print(f"Embedding generated successfully: {embedding[:10]}")  # Print first 10 elements
-        return np.array(embedding)
-    except Exception as e:
-        print(f"Error in generating embedding: {e}")
-        return None
+    PineconeVectorStore.from_documents(documents=documents, embedding=embeddings, index_name='ai-code-analyzer', pinecone_api_key=PINECONE_API_KEY)
+    print("Loading to vectorstore (pinecone) complete")
+
+    print("Model loaded successfully")
+    return embeddings
 
 
 
@@ -62,12 +52,8 @@ def fetch_and_index_codebase(repo):
             elif file_content.name.endswith(('.js', '.java', '.cpp')):
                 try:
                     code = file_content.decoded_content.decode('utf-8')
-                    embedding = generate_embedding(code)
-                    if embedding is not None and embedding.dtype.type is np.float32:
-                        print(f"Indexing file {file_content.path}")
-                        index.upsert([(file_content.path, embedding.tolist())])
-                    else:
-                        raise ValueError("Invalid embedding data type or embedding generation failed.")
+                    generate_embedding(code)
+                
                 except Exception as inner_e:
                     print(f"Failed processing file {file_content.path}: {inner_e}")
     except Exception as e:
@@ -87,6 +73,8 @@ def get_pull_request_diffs(pull_request):
 def format_data_for_openai(diffs):
     print("Formatting data for OpenAI...")
     embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.getenv('OPENAI_API_KEY'))
+
+
     document_vectorstore = PineconeVectorStore(index_name="ai-code-analyzer", embedding=embeddings, pinecone_api_key=os.getenv('PINECONE_API_KEY'))
     retriever = document_vectorstore.as_retriever()
 
@@ -94,39 +82,28 @@ def format_data_for_openai(diffs):
     formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
     try:
-        context_response = retriever.invoke(formatted_text)
-        print(f"Context response: {context_response}")
+        context = retriever.get_relevant_documents(formatted_text)
+        print(f"Context response: {context}")
         
-        # Inspect the structure of the response
-        if context_response and hasattr(context_response, 'matches'):
-            matches = context_response.matches
-            print(f"Matches found: {len(matches)}")
-            for match in matches:
-                print(f"Match metadata: {match.metadata if hasattr(match, 'metadata') else 'No metadata found'}")
-                
-            # Extract context from matches
-            context = ' '.join([match.metadata.get('text', 'No metadata found') for match in matches if hasattr(match, 'metadata')])
-            print(f"Context retrieved successfully: {context[:100]}")  # Print the first 100 characters of context
-        else:
-            print("No relevant context found")
-            context = "No relevant context available."
+
     except Exception as e:
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
 
     changes = "\n".join([f"File: {file['filename']}\nDiff:\n{file['patch']}" for file in diffs])
-    prompt = (
-        "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
-        "and point out areas that could cause potential bugs and performance issues.\n\n"
-        "Context of changes:\n" + str(context) +  # Convert context to string before concatenating
-        "\n\nDetailed changes:\n" + changes +
-        "\n\nProvide suggestions based on the details and context provided above."
-    )
+
+    template = PromptTemplate(
+        template=
+            "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
+            "and point out areas that could cause potential bugs and performance issues.\n\nContext of changes: {context}\n\nDetailed changes: "
+            "{changes}\n\nProvide suggestions based on the details and context provided above.", input_variables={"context": context, "changes": changes})
+
+    prompt_with_context = template.invoke({"context": context, "changes": changes})
 
     print("Generating suggestions using AI...")
     llm = ChatOpenAI(temperature=0.5, api_key=os.getenv('OPENAI_API_KEY'))
     try:
-        results = llm.invoke(prompt)
+        results = llm.invoke(prompt_with_context)
         print(f"Results: {results.content}")
     except Exception as e:
         print(f"Error invoking AI model: {e}")
