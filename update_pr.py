@@ -84,12 +84,12 @@ def format_data_for_openai(diffs):
     retriever = document_vectorstore.as_retriever()
 
     print("Retrieving context...")
-    formatted_text = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
+    changes = '\n'.join([f"File: {diff['filename']}\nDiff:\n{diff['patch']}" for diff in diffs])
 
-    print(f"Formatted text: {formatted_text}")
+    print(f"Changes: {changes}")
 
     try:
-        context = retriever.get_relevant_documents(formatted_text)
+        context = retriever.get_relevant_documents(changes)
         print(f"Context response: {context}")
         
 
@@ -97,16 +97,17 @@ def format_data_for_openai(diffs):
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
 
-    changes = "\n".join([f"File: {file['filename']}\nDiff:\n{file['patch']}" for file in diffs])
-
     template = PromptTemplate(
         template=
             "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
-            "and point out areas that could cause potential bugs and performance issues. Also point out if the new code in changes is duplicated based on the context. "
+            "and point out areas that could cause potential bugs and performance issues. Also point out any possbile duplicate code in the changes based on the context provided for the rest of the code base."
             "Keep the suggestions concise and clear and limit the suggestions to just 1 or 2 sentences."
-            "Add suggestions for error handling, code optimization, and code readability improvements."
-            "\n\nContext of changes: {context}\n\nDetailed changes: {changes}\n\n "
-            "Provide suggestions based on the details and context provided above and only make suggestions for the new code changes, and do not suggest changes for code in the context", input_variables=["context", "changes"])
+            "Do not add any fluffy language or unnecessary details. Organize each suggestion in a bullet point. Add a code snippet if necessary.\n\n"
+            "Do not give suggestions about the code in the context provided, only the code changes.\n\n"
+            "Add suggestions for error handling, code optimization, and code readability improvements.\n\n"
+            "Detailed changes: {changes}\n\n "
+            "Context of changes: {context}\n\n",
+            input_variables=["context", "changes"])
 
 
     prompt_with_context = template.invoke({"context": context, "changes": changes})
@@ -135,7 +136,7 @@ def call_openai(prompt):
 
 
         messages = [
-            {"role": "system", "content": "You are an AI trained to help refactor code by giving suggestions for improvements as well as code snippets to replace the existing code."},
+            {"role": "system", "content": "You are an AI trained to help analyze new code changes that are submitted in a pull request and give feedback on areas that can be improved. Please provide suggestions for code improvements based on the context provided for the rest of the code base. You can also point out potential bugs, performance issues, and areas for code optimization. Please keep the suggestions concise and clear, and limit them to just 1 or 2 sentences. You can also suggest improvements for error handling, code optimization, and code readability. The context provided is based on the rest of the codebase."},
             {"role": "user", "content": prompt}
         ]
         response = client.invoke(input=messages)
