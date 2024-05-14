@@ -75,15 +75,9 @@ def format_data_for_openai(diffs):
 
     try:
         print("Retrieving context...")
-        context_response = retriever.invoke(formatted_text)
-        print(f"Context response: {context_response}")
-        # Properly check and extract metadata if available
-        if context_response and context_response.matches:
-            context = ' '.join([match.metadata.get('additional_info', 'No metadata found') for match in context_response.matches])
-            print(f"Context retrieved successfully: {context[:100]}")
-        else:
-            print("No context found")
-            context = "No relevant context available."
+        context = retriever.invoke(formatted_text)
+        print(f"Context response: {context}")
+
     except Exception as e:
         print(f"An unexpected error occurred while retrieving context: {e}")
         return None
