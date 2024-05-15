@@ -33,7 +33,6 @@ def generate_embedding(text, model="text-embedding-3-large"):
     documents = text_splitter.split_documents([document])
 
     print(f"Going to add {len(documents)} to Pinecone.")
-    print(f"Documents: {documents}")
 
     embeddings = OpenAIEmbeddings(model='text-embedding-3-large', api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -56,7 +55,6 @@ def fetch_and_index_codebase(repo):
                 try:
                     code = file_content.decoded_content.decode('utf-8')
                     print(f"Processing file {file_content.path}")
-                    print(f"Code: {code}")
                     generate_embedding(code)
                 
                 except Exception as inner_e:
@@ -105,6 +103,8 @@ def format_data_for_openai(diffs):
             "Do not add any fluffy language or unnecessary details. Organize each suggestion in a bullet point. Add a code snippet if necessary.\n\n"
             "Do not give suggestions about the code in the context provided, only the code changes.\n\n"
             "Add suggestions for error handling, code optimization, and code readability improvements.\n\n"
+            "If the code in the changes is similar to the code in the context, point out the similarities and suggest ways to refactor the code to avoid duplication.\n\n"
+            "Each suggestion should include a brief explanation of the problem and a possible solution, including a code snippet bassed on the suggestion. \n\n"
             "Detailed changes: {changes}\n\n "
             "Context of changes: {context}\n\n",
             input_variables=["context", "changes"])
@@ -116,7 +116,6 @@ def format_data_for_openai(diffs):
     llm = ChatOpenAI(temperature=0.5, api_key=os.getenv('OPENAI_API_KEY'))
     try:
         results = llm.invoke(prompt_with_context)
-        print(f"Results: {results.content}")
     except Exception as e:
         print(f"Error invoking AI model: {e}")
         return "Failed to generate suggestions due to an error."
@@ -131,8 +130,6 @@ def call_openai(prompt):
         print("Making LLM call...")
         if isinstance(prompt, list):
             prompt = ' '.join(map(str, prompt))  # Convert list elements to string if not already, and join them
-
-        print(f"Prompt: {prompt}")
 
 
         messages = [
