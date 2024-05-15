@@ -99,12 +99,12 @@ def format_data_for_openai(diffs):
         template=
             "Analyze the following code changes for potential refactoring opportunities to make the code more readable and efficient, "
             "and point out areas that could cause potential bugs and performance issues. Also point out any possbile duplicate code in the changes based on the context provided for the rest of the code base."
-            "Keep the suggestions concise and clear and limit the suggestions to just 1 or 2 sentences."
-            "Do not add any fluffy language or unnecessary details. Organize each suggestion in a bullet point. Add a code snippet if necessary.\n\n"
-            "Do not give suggestions about the code in the context provided, only the code changes.\n\n"
-            "Add suggestions for error handling, code optimization, and code readability improvements.\n\n"
-            "If the code in the changes is similar to the code in the context, point out the similarities and suggest ways to refactor the code to avoid duplication.\n\n"
-            "Each suggestion should include a brief explanation of the problem and a possible solution, including a code snippet bassed on the suggestion. \n\n"
+            "Your main goal is to point out common code smells such as duplicate code, large functions that are not reusable, potential bugs, and performance issues in the code changes."
+            "You should also suggest ways to refactor the code to make it more readable, efficient, and maintainable. You should not suggest changes to the code in the context provided."
+            "You should add code snippets to your suggestions to make them more clear and actionable. You should keep your suggestions concise and clear, and limit them to 1 or 2 sentences."
+            "If a suggestion is based on the code in the context, you need to make it clear where the code is found from the context and how it is relevant to the code in the changes."
+            "If you find that the code in the changes is similar to the code in the context, you should point out the similarities and suggest ways to refactor the code to avoid duplication."
+            "Mention at least one function that is found in the context, even if it is not relevant, just to show that you are taking the context into consideration."
             "Detailed changes: {changes}\n\n "
             "Context of changes: {context}\n\n",
             input_variables=["context", "changes"])
@@ -134,12 +134,6 @@ def call_openai(prompt):
 
         messages = [
             {"role": "system", "content": "You are an AI trained to help analyze new code changes that are submitted in a pull request and give feedback on areas that can be improved."
-             "Your main goal is to point out common code smells such as duplicate code, large functions that are not reusable, potential bugs, and performance issues in the code changes."
-             "You should also suggest ways to refactor the code to make it more readable, efficient, and maintainable. You should not suggest changes to the code in the context provided."
-             "You should add code snippets to your suggestions to make them more clear and actionable. You should keep your suggestions concise and clear, and limit them to 1 or 2 sentences."
-             "If a suggestion is based on the code in the context, you need to make it clear where the code is found from the context and how it is relevant to the code in the changes."
-             "If you find that the code in the changes is similar to the code in the context, you should point out the similarities and suggest ways to refactor the code to avoid duplication."
-             "Mention at least one function that is found in the context, even if it is not relevant, just to show that you are taking the context into consideration."
              "The context provided is based on the rest of the codebase."},
             {"role": "user", "content": prompt}
         ]
