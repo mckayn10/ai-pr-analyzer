@@ -139,6 +139,7 @@ def call_openai(prompt):
              "You should add code snippets to your suggestions to make them more clear and actionable. You should keep your suggestions concise and clear, and limit them to 1 or 2 sentences."
              "If a suggestion is based on the code in the context, you need to make it clear where the code is found from the context and how it is relevant to the code in the changes."
              "If you find that the code in the changes is similar to the code in the context, you should point out the similarities and suggest ways to refactor the code to avoid duplication."
+             "Mention at least one function that is found in the context, even if it is not relevant, just to show that you are taking the context into consideration."
              "The context provided is based on the rest of the codebase."},
             {"role": "user", "content": prompt}
         ]
